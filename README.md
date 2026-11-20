@@ -201,44 +201,9 @@ Jakby sie ktos pytal czym jest ten monolit:
 W projekcie **SafeWork** (5-osobowy zespół, 6 tygodni na MVP, obciążenie do 100 użytkowników jednocześnie) modularny monolit daje optymalny kompromis: pozwala szybko dowieźć działający system bez tracenia czasu na skomplikowaną infrastrukturę, a jednocześnie utrzymuje porządek w kodzie. Jeśli w przyszłości któryś moduł (np. raportowanie) będzie wymagał niezależnego skalowania, jego wydzielenie do osobnego mikroserwisu będzie proste, ponieważ granice zostały już wyznaczone.
 
 
-
-
-
-adekwatność architektury do skali projektu: Architektura nie wydaje sie wybiegac ponad skale projektu
-ryzyko overengineeringu: niskie
-czy AI stosuje modne technologie bez uzasadnienia: nie, uzasadnia je
-jasność odpowiedzialności komponentów: w miare
-utrzymywalność i testowalność rozwiązania: ten modularny monolit
-czy rozwiązanie jest technicznie możliwe, ale niepraktyczne: wydaje sie praktyczne
-
-
 ---
 
 
-### Prompt 2: Przy założeniu, że jest 20 zgłoszeń dziennie, oszacuj ile objętości zajęłoby przechowywanie całego tekstu w skali miesiąca przy założeniu, że będą 2 zdarzenia krytyczne, które trzeba będzie przechowywać ze zdjęciami?
-
-Przechowywanie wszystkich danych tekstowych z całego miesiąca (600 zgłoszeń) wraz ze zdjęciami z 2 zdarzeń krytycznych zajmie łącznie zaledwie **ok. 15–45 MB miesięcznie**.
-
-Przy takiej skali objętość danych jest pomijalnie mała — mieści się w ułamku darmowych limitów większości usług chmurowych.
-
-### Szczegółowe wyliczenie (założenie: 30 dni × 20 zgłoszeń = 600 zgłoszeń/miesiąc)
-
-| Składnik | Obliczenia | Szacowana objętość / mies. |
-| --- | --- | --- |
-| **Sam tekst, metadane i audyt** (PostgreSQL) | 600 zgłoszeń × 5–10 KB | **3 – 6 MB** |
-| **Wektory AI / embeddingi** (`pgvector`) | 600 zgłoszeń × 6–15 KB | **3,6 – 9 MB** |
-| **Zdjęcia – 2 zdarzenia krytyczne** (po kompresji, np. 2–3 zdj. na zdarzenie) | 4–6 zdjęć × 0,5–1 MB | **2 – 6 MB** |
-| **Zdjęcia – 2 zdarzenia krytyczne** (surowe oryginały dowodowe, 2–3 zdj.) | 4–6 zdjęć × 3–5 MB | **12 – 30 MB** |
-| **RAZEM (wersja ze zdjęciami skompresowanymi)** |  | **~9 – 21 MB** |
-| **RAZEM (wersja z surowymi zdjęciami dowodowymi)** |  | **~19 – 45 MB** |
-
-### Praktyczny wniosek dla projektu
-
-* **Zdarzenia krytyczne jako materiał dowodowy:** Przy zaledwie 2 zdarzeniach krytycznych miesięcznie koszt przechowywania ich zdjęć w pełnej, nieskompresowanej rozdzielczości (z oryginalnymi metadanymi EXIF) to maksymalnie **~30 MB miesięcznie** (~360 MB rocznie). Warto więc dla zdarzeń krytycznych (Tier 4/5) wyłączyć kompresję lub zachować oryginał na potrzeby postępowań BHP i ubezpieczeniowych.
-* **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
-
-
----
 ### Adekwatność architektury do skali projektu:
 
 Architektura nie wydaje sie wybiegac ponad skale projektu. Wręcz przeciwnie, AI sugeruje
@@ -315,7 +280,7 @@ Prawie na pewno nie. AI prezentuje uzasadnienie zastosowania zaproponowanych tec
 ### Jasność odpowiedzialności komponentów:
 W tym miejscu zespół miał kilka uwag i pytań, zatem poprosiliśmy AI o doprecyzowanie. Wyniki tej prośby zawarto poniżej.
 
-### Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
+### Dodatkowy Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
 
 Na poziomie ogólnym podział odpowiedzialności jest poprawny — dobrze oddziela szybkie przyjmowanie zgłoszeń od wolnej analizy AI oraz sugestię algorytmu od decyzji człowieka. Przy dokładniejszym audycie widać jednak **cztery miejsca, w których granice między komponentami się rozmywają** i w praktyce powodowałyby problemy w kodzie.
 
