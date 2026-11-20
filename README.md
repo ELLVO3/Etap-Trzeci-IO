@@ -261,3 +261,44 @@ Przy takiej skali objętość danych jest pomijalnie mała — mieści się w u�
 
 * **Zdarzenia krytyczne jako materiał dowodowy:** Przy zaledwie 2 zdarzeniach krytycznych miesięcznie koszt przechowywania ich zdjęć w pełnej, nieskompresowanej rozdzielczości (z oryginalnymi metadanymi EXIF) to maksymalnie **~30 MB miesięcznie** (~360 MB rocznie). Warto więc dla zdarzeń krytycznych (Tier 4/5) wyłączyć kompresję lub zachować oryginał na potrzeby postępowań BHP i ubezpieczeniowych.
 * **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
+
+
+### Utrzymywalność i testowalność rozwiązania:
+
+Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
+
+W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
+
+
+### Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
+
+Na poziomie ogólnym podział odpowiedzialności jest poprawny — dobrze oddziela szybkie przyjmowanie zgłoszeń od wolnej analizy AI oraz sugestię algorytmu od decyzji człowieka. Przy dokładniejszym audycie widać jednak **cztery miejsca, w których granice między komponentami się rozmywają** i w praktyce powodowałyby problemy w kodzie.
+
+### Co działa dobrze
+
+* **Izolacja przetwarzania AI:** `Worker AI` nie blokuje zapisu zgłoszenia i nie podejmuje ostatecznych decyzji — dostarcza wyłącznie dane analityczne (`ai_suggestion`, podobne incydenty).
+* **Rozdzielenie warstw danych:** Pliki binarne (S3) są wyraźnie oddzielone od danych transakcyjnych i wektorów (PostgreSQL).
+* **Brama wejściowa:** `Reverse Proxy` przejmuje kwestie techniczne (TLS, wstępna autoryzacja), odciążając logikę biznesową.
+
+---
+
+### Gdzie odpowiedzialności są niejasne (punkty do poprawy)
+
+1. **Silnik Reguł (Warstwa A) omija Moduł Decyzyjny**
+Na diagramie `Silnik Reguł` wysyła sygnał Tier 4 bezpośrednio do `Modułu Powiadomień`. To rozbija spójność systemu: skoro za fuzję priorytetów i ślad audytowy odpowiada `Moduł Decyzyjny`, to **oba źródła (Warstwa A i Warstwa B) powinny raportować wyłącznie do niego**. W przeciwnym razie logika zapisu audytu i ustawiania `effective_priority` musiałaby zostać zduplikowana w dwóch miejscach.
+2. **Moduł Powiadomień zawiera logikę biznesową (SLA i eskalacja)**
+Wrzucenie licznika SLA (5 minut) i logiki eskalacji Tier 5 do `Modułu Powiadomień` miesza **mechanikę dostarczania** (wysłanie SMS/Push/e-mail) z **regułami biznesowymi** (kto, kiedy i na jakich warunkach przejmuje incydent). Moduł powiadomień powinien być „głupim” wykonawcą, a procesem eskalacji i timerami SLA powinien zarządzać `Moduł Decyzyjny` lub dedykowany komponent orkiestracji.
+3. **Worker AI łączy się bezpośrednio z bazą danych Monolitu**
+Bezpośredni dostęp `Workera AI` do głównej bazy PostgreSQL (w celu szukania podobnych zgłoszeń w `pgvector`) łamie zasadę izolacji danych w modularnym monolicie. Jeśli zmieni się schemat tabeli zgłoszeń w monolicie, worker przestanie działać. Powinien mieć dostęp wyłącznie do wydzielonego schematu wektorowego (własnego dla AI) lub komunikować się z rdzeniem przez zdefiniowane API / kolejkę.
+4. **Audyt sklejony z Modułem Decyzyjnym**
+Połączenie `Modułu Decyzyjnego` i `Audytu` w jeden blok sugeruje, że audytowane są tylko decyzje o priorytetach. Tymczasem wymaganie RNF-BE-003 wymaga pełnego śladu zmian w całym systemie (np. zmiana statusu, przypisanie serwisanta, eksport raportu). **Audyt jest odpowiedzialnością przekrojową** — powinien być osobnym, lekkim modułem (lub mechanizmem opartym na zdarzeniach), do którego zapisują wszystkie pozostałe moduły.
+
+---
+
+### Jak powinien wyglądać czysty podział odpowiedzialności
+
+* **Moduł Zgłoszeń:** Tylko cykl życia zgłoszenia, formularz, statusy i przypisania.
+* **Warstwa A (Reguły) i Warstwa B (Worker AI):** Tylko *ocena* zgłoszenia (zwracają wynik oceny, nic nie wysyłają i nie zmieniają statusów).
+* **Moduł Decyzyjny i Eskalacji:** Jedyne źródło prawdy o priorytecie (`effective_priority`), fuzji Warstwy A/B/C oraz pilnowaniu SLA (timery 5 min i eskalacja Tier 5).
+* **Moduł Powiadomień:** Wyłącznie techniczna wysyłka komunikatów przez zewnętrzne bramki (SMS, Push, E-mail) i obsługa ponowień (retry).
+* **Moduł Audytu:** Wyłącznie niemutowalny zapis wszystkich istotnych zdarzeń ze wszystkich modułów.
