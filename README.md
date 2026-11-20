@@ -297,7 +297,7 @@ Połączenie `Modułu Decyzyjnego` i `Audytu` w jeden blok sugeruje, że audytow
 * **Moduł Powiadomień:** Wyłącznie techniczna wysyłka komunikatów przez zewnętrzne bramki (SMS, Push, E-mail) i obsługa ponowień (retry).
 * **Moduł Audytu:** Wyłącznie niemutowalny zapis wszystkich istotnych zdarzeń ze wszystkich modułów.
 
-
+---
 ### Adekwatność architektury do skali projektu:
 
 Architektura nie wydaje sie wybiegac ponad skale projektu. Wręcz przeciwnie, AI sugeruje
@@ -322,13 +322,16 @@ Za bezpieczeństwo na hali odpowiada wyznaczony pracownik (najczęściej kierown
 i to na nim, nie na dyrekorze spoczywa odpowiedzialność reakcji na wypadki. Nie wspominając
 o wątpliwych kompetencjach dyrekcji w zakresie procesów technologicznych.
 
+---
 
 
 
-
+---
 
 ### Utrzymywalność i testowalność rozwiązania:
 
 Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
 
 W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
+
+---
