@@ -175,32 +175,6 @@ Architektura pozwala na przyrostowe budowanie systemu bez przepisywania fundamen
 
 4. **Faza 4 – Raporty i Eksporty (3 tygodnie):** Dodanie modułu generowania raportów CSV/PDF oraz panelu monitoringu dryfu i kalibracji modelu AI.
 
-
-Jakby sie ktos pytal czym jest ten monolit:
-
-**Modularny monolit** to styl architektoniczny, w którym cała aplikacja jest budowana i uruchamiana jako **jeden program** (monolit), ale jej kod jest wewnątrz ściśle podzielony na **niezależne, odizolowane moduły biznesowe**.
-
-Łączy prostotę wdrożenia tradycyjnego monolitu z porządkiem i separacją odpowiedzialności znaną z mikroserwisów.
-
-### Główne cechy modularnego monolitu
-
-* **Jedna jednostka wdrożeniowa:** Cały system kompiluje się i wdraża razem (np. jako jeden kontener Docker). Nie trzeba zarządzać siecią kilkunastu osobnych serwerów.
-* **Ścisłe granice między modułami:** W przeciwieństwie do klasycznego monolitu (który często zamienia się w tzw. *spaghetti code*), moduły nie mogą dowolnie korzystać ze swojego wewnętrznego kodu. Komunikują się wyłącznie przez jasno zdefiniowane interfejsy publiczne lub wewnętrzne zdarzenia.
-* **Izolacja danych:** Nawet jeśli wszystkie moduły korzystają z jednej bazy danych (np. PostgreSQL), każdy moduł jest właścicielem swoich tabel. Moduł *Raportów* nie modyfikuje bezpośrednio tabel modułu *Zgłoszeń* – pobiera dane wyłącznie przez jego interfejs.
-* **Komunikacja w pamięci (in-memory):** Moduły wymieniają dane przez zwykłe wywołania funkcji w pamięci RAM, a nie przez sieć (HTTP). Jest to znacznie szybsze, prostsze w debugowaniu i odporne na problemy sieciowe.
-
-### Porównanie z innymi podejściami
-
-| Cecha | Tradycyjny Monolit | Modularny Monolit | Mikroserwisy |
-| --- | --- | --- | --- |
-| **Wdrożenie (DevOps)** | Bardzo proste (1 aplikacja) | Bardzo proste (1 aplikacja) | Złożone (wiele usług, orkiestracja) |
-| **Porządek i izolacja kodu** | Niska (łatwo o splątanie zależności) | Wysoka (wymuszone granice modułów) | Bardzo wysoka (fizyczna separacja) |
-| **Komunikacja wewnętrzna** | W pamięci (szybka) | W pamięci (szybka) | Sieciowa (opóźnienia, awarie sieci) |
-| **Łatwość rozwoju w małym zespole** | Wysoka na starcie, potem spada | Wysoka przez cały cykl życia | Niska (duży narzut na infrastrukturę) |
-
-W projekcie **SafeWork** (5-osobowy zespół, 6 tygodni na MVP, obciążenie do 100 użytkowników jednocześnie) modularny monolit daje optymalny kompromis: pozwala szybko dowieźć działający system bez tracenia czasu na skomplikowaną infrastrukturę, a jednocześnie utrzymuje porządek w kodzie. Jeśli w przyszłości któryś moduł (np. raportowanie) będzie wymagał niezależnego skalowania, jego wydzielenie do osobnego mikroserwisu będzie proste, ponieważ granice zostały już wyznaczone.
-
-
 ---
 
 
@@ -275,12 +249,38 @@ Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa j
 ### Czy AI stosuje modne technologie bez uzasadnienia:
 Prawie na pewno nie. AI prezentuje uzasadnienie zastosowania zaproponowanych technologii, wraz z porównaniem dlaczego rozwiązania alternatywne byłyby mniej adekwatne. Zespół pragnie w tym miejscu zaznaczyć, że nie czuje się kompetentnym do oceny czy zaproponowane technologie są modne.
 
+
+### Dodatkowy Prompt 3: Czym jest modularny monolit?
+
+**Modularny monolit** to styl architektoniczny, w którym cała aplikacja jest budowana i uruchamiana jako **jeden program** (monolit), ale jej kod jest wewnątrz ściśle podzielony na **niezależne, odizolowane moduły biznesowe**.
+
+Łączy prostotę wdrożenia tradycyjnego monolitu z porządkiem i separacją odpowiedzialności znaną z mikroserwisów.
+
+### Główne cechy modularnego monolitu
+
+* **Jedna jednostka wdrożeniowa:** Cały system kompiluje się i wdraża razem (np. jako jeden kontener Docker). Nie trzeba zarządzać siecią kilkunastu osobnych serwerów.
+* **Ścisłe granice między modułami:** W przeciwieństwie do klasycznego monolitu (który często zamienia się w tzw. *spaghetti code*), moduły nie mogą dowolnie korzystać ze swojego wewnętrznego kodu. Komunikują się wyłącznie przez jasno zdefiniowane interfejsy publiczne lub wewnętrzne zdarzenia.
+* **Izolacja danych:** Nawet jeśli wszystkie moduły korzystają z jednej bazy danych (np. PostgreSQL), każdy moduł jest właścicielem swoich tabel. Moduł *Raportów* nie modyfikuje bezpośrednio tabel modułu *Zgłoszeń* – pobiera dane wyłącznie przez jego interfejs.
+* **Komunikacja w pamięci (in-memory):** Moduły wymieniają dane przez zwykłe wywołania funkcji w pamięci RAM, a nie przez sieć (HTTP). Jest to znacznie szybsze, prostsze w debugowaniu i odporne na problemy sieciowe.
+
+### Porównanie z innymi podejściami
+
+| Cecha | Tradycyjny Monolit | Modularny Monolit | Mikroserwisy |
+| --- | --- | --- | --- |
+| **Wdrożenie (DevOps)** | Bardzo proste (1 aplikacja) | Bardzo proste (1 aplikacja) | Złożone (wiele usług, orkiestracja) |
+| **Porządek i izolacja kodu** | Niska (łatwo o splątanie zależności) | Wysoka (wymuszone granice modułów) | Bardzo wysoka (fizyczna separacja) |
+| **Komunikacja wewnętrzna** | W pamięci (szybka) | W pamięci (szybka) | Sieciowa (opóźnienia, awarie sieci) |
+| **Łatwość rozwoju w małym zespole** | Wysoka na starcie, potem spada | Wysoka przez cały cykl życia | Niska (duży narzut na infrastrukturę) |
+
+W projekcie **SafeWork** (5-osobowy zespół, 6 tygodni na MVP, obciążenie do 100 użytkowników jednocześnie) modularny monolit daje optymalny kompromis: pozwala szybko dowieźć działający system bez tracenia czasu na skomplikowaną infrastrukturę, a jednocześnie utrzymuje porządek w kodzie. Jeśli w przyszłości któryś moduł (np. raportowanie) będzie wymagał niezależnego skalowania, jego wydzielenie do osobnego mikroserwisu będzie proste, ponieważ granice zostały już wyznaczone.
+
+
 ---
 
 ### Jasność odpowiedzialności komponentów:
 W tym miejscu zespół miał kilka uwag i pytań, zatem poprosiliśmy AI o doprecyzowanie. Wyniki tej prośby zawarto poniżej.
 
-### Dodatkowy Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
+### Dodatkowy Prompt 4: Co sądzisz o jasności odpowiedzialności komponentów?
 
 Na poziomie ogólnym podział odpowiedzialności jest poprawny — dobrze oddziela szybkie przyjmowanie zgłoszeń od wolnej analizy AI oraz sugestię algorytmu od decyzji człowieka. Przy dokładniejszym audycie widać jednak **cztery miejsca, w których granice między komponentami się rozmywają** i w praktyce powodowałyby problemy w kodzie.
 
