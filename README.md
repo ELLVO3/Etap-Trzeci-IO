@@ -212,33 +212,8 @@ utrzymywalność i testowalność rozwiązania: ten modularny monolit
 czy rozwiązanie jest technicznie możliwe, ale niepraktyczne: wydaje sie praktyczne
 
 
+---
 
-
-
-### PROMPT 1: Jak szyfrowanie tak dużych paczek wpłynie na szybkość obsługi przez system?
-
-Wpływ szyfrowania na szybkość obsługi paczek o rozmiarze 1–10 MB jest **pomijalny — to ułamek procenta całkowitego czasu operacji (zwykle 1–10 milisekund)**.
-
-Współczesne procesory (zarówno serwerowe, jak i w smartfonach) posiadają sprzętowe wsparcie dla kryptografii (instrukcje AES-NI oraz ARMv8 Crypto). Dzięki temu pojedynczy rdzeń szyfruje dane z prędkością **1–5 GB/s**.
-
-### Porównanie wąskich gardeł dla pojedynczego zgłoszenia
-
-Prawdziwym ograniczeniem w systemie SafeWork nie jest szyfrowanie, lecz **przepustowość sieci na hali produkcyjnej**.
-
-| Etap przetwarzania | Paczka 1 MB (po kompresji w PWA) | Paczka 10 MB (surowe zdjęcia) | Wpływ na odczucia użytkownika |
-| --- | --- | --- | --- |
-| **Szyfrowanie w tranzycie (TLS 1.3)** | < 1 ms | ~2–5 ms | Niezauważalny |
-| **Szyfrowanie w spoczynku (AES-256 na S3/dysku)** | < 1 ms | ~2–10 ms | Niezauważalny |
-| **Kompresja zdjęcia w przeglądarce (PWA)** | ~100–300 ms | 0 ms (pominięta) | Minimalny |
-| **Wysłanie po słabym Wi-Fi/LTE (np. 4 Mb/s upload)** | **~2 s** | **~20 s** | **Krytyczny** |
-
-### Jak to działa w zaprojektowanej architekturze
-
-* **Szyfrowanie w tranzycie (TLS 1.3):** Realizowane w locie (strumieniowo) przez przeglądarkę i Reverse Proxy. Najbardziej kosztowny element — nawiązanie połączenia (*TLS handshake*) — odbywa się raz i jest utrzymywany dla kolejnych żądań, zajmując ok. 20–50 ms.
-* **Szyfrowanie w spoczynku (at-rest):** Odbywa się na poziomie systemu plików (np. szyfrowane wolumeny dyskowe) lub silnika Object Storage (SSE-S3 w MinIO/AWS). Aplikacja w ogóle nie marnuje na to zasobów CPU, a dyski NVMe/SSD z warstwą szyfrującą nie wykazują zauważalnego spadku prędkości zapisu przy skali ~100 użytkowników.
-* **Narzut na rozmiar danych:** Szyfrowanie symetryczne (AES-GCM) nie zwiększa istotnie rozmiaru pliku — dodaje zaledwie kilkadziesiąt bajtów metadanych (wektor inicjalizujący i tag uwierzytelniający).
-
-Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa jest więc nie rezygnacja z szyfrowania ani jego optymalizacja, lecz **kompresja zdjęć po stronie klienta (PWA)** oraz asynchroniczne przesyłanie dużych załączników w tle, podczas gdy sam tekst zgłoszenia trafia do bazy natychmiast.
 
 ### Prompt 2: Przy założeniu, że jest 20 zgłoszeń dziennie, oszacuj ile objętości zajęłoby przechowywanie całego tekstu w skali miesiąca przy założeniu, że będą 2 zdarzenia krytyczne, które trzeba będzie przechowywać ze zdjęciami?
 
@@ -263,6 +238,82 @@ Przy takiej skali objętość danych jest pomijalnie mała — mieści się w u�
 * **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
 
 
+---
+### Adekwatność architektury do skali projektu:
+
+Architektura nie wydaje sie wybiegac ponad skale projektu. Wręcz przeciwnie, AI sugeruje
+przechowywanie zgłoszeń przez 30 dni. W opini zespołu wskazane byłoby storzenie archiwum
+zdarzeń przechowujące wszystkie zgłoszenia: w pełni (t.j. z dokumentacją zdjęciową) w
+przypadku zgłoszeń krytycznych, w przypadku pozostałych tylko dokumentację tekstową.
+Takie rozwiązanie pomogło by w szkoleniu workera AI oraz umożliwiło by rozbudowę systemu
+o dodatkowy moduł skanujący w określonych odstępach czsu (np. co tydzień) w poszukiwaniu
+trendów sugerujących regularne występowanie problemów w sekcjach. Szacowane wyliczenie
+kosztów technologicznych zawarto w dalszej części dokumentu.
+
+
+
+### Dodatkowy Prompt 1: Przy założeniu, że jest 20 zgłoszeń dziennie, oszacuj ile objętości zajęłoby przechowywanie całego tekstu w skali miesiąca przy założeniu, że będą 2 zdarzenia krytyczne, które trzeba będzie przechowywać ze zdjęciami?
+
+Przechowywanie wszystkich danych tekstowych z całego miesiąca (600 zgłoszeń) wraz ze zdjęciami z 2 zdarzeń krytycznych zajmie łącznie zaledwie **ok. 15–45 MB miesięcznie**.
+
+Przy takiej skali objętość danych jest pomijalnie mała — mieści się w ułamku darmowych limitów większości usług chmurowych.
+
+### Szczegółowe wyliczenie (założenie: 30 dni × 20 zgłoszeń = 600 zgłoszeń/miesiąc)
+
+| Składnik | Obliczenia | Szacowana objętość / mies. |
+| --- | --- | --- |
+| **Sam tekst, metadane i audyt** (PostgreSQL) | 600 zgłoszeń × 5–10 KB | **3 – 6 MB** |
+| **Wektory AI / embeddingi** (`pgvector`) | 600 zgłoszeń × 6–15 KB | **3,6 – 9 MB** |
+| **Zdjęcia – 2 zdarzenia krytyczne** (po kompresji, np. 2–3 zdj. na zdarzenie) | 4–6 zdjęć × 0,5–1 MB | **2 – 6 MB** |
+| **Zdjęcia – 2 zdarzenia krytyczne** (surowe oryginały dowodowe, 2–3 zdj.) | 4–6 zdjęć × 3–5 MB | **12 – 30 MB** |
+| **RAZEM (wersja ze zdjęciami skompresowanymi)** |  | **~9 – 21 MB** |
+| **RAZEM (wersja z surowymi zdjęciami dowodowymi)** |  | **~19 – 45 MB** |
+
+### Praktyczny wniosek dla projektu
+
+* **Zdarzenia krytyczne jako materiał dowodowy:** Przy zaledwie 2 zdarzeniach krytycznych miesięcznie koszt przechowywania ich zdjęć w pełnej, nieskompresowanej rozdzielczości (z oryginalnymi metadanymi EXIF) to maksymalnie **~30 MB miesięcznie** (~360 MB rocznie). Warto więc dla zdarzeń krytycznych (Tier 4/5) wyłączyć kompresję lub zachować oryginał na potrzeby postępowań BHP i ubezpieczeniowych.
+* **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
+
+
+---
+
+### Ryzyko overengineeringu:
+Niskie. Jedynym zastanawiającym aspektem jest nacisk położony na szyfrowanie zgłoszeń, jednakże biorąc pod uwagę iż wpływ tego rozwiązania na responsywność i szybkość działania systemu jest infinitezymalny możemy to wybaczyć.
+
+### Dodatkowy PROMPT 2: Jak szyfrowanie tak dużych paczek wpłynie na szybkość obsługi przez system?
+
+Wpływ szyfrowania na szybkość obsługi paczek o rozmiarze 1–10 MB jest **pomijalny — to ułamek procenta całkowitego czasu operacji (zwykle 1–10 milisekund)**.
+
+Współczesne procesory (zarówno serwerowe, jak i w smartfonach) posiadają sprzętowe wsparcie dla kryptografii (instrukcje AES-NI oraz ARMv8 Crypto). Dzięki temu pojedynczy rdzeń szyfruje dane z prędkością **1–5 GB/s**.
+
+### Porównanie wąskich gardeł dla pojedynczego zgłoszenia
+
+Prawdziwym ograniczeniem w systemie SafeWork nie jest szyfrowanie, lecz **przepustowość sieci na hali produkcyjnej**.
+
+| Etap przetwarzania | Paczka 1 MB (po kompresji w PWA) | Paczka 10 MB (surowe zdjęcia) | Wpływ na odczucia użytkownika |
+| --- | --- | --- | --- |
+| **Szyfrowanie w tranzycie (TLS 1.3)** | < 1 ms | ~2–5 ms | Niezauważalny |
+| **Szyfrowanie w spoczynku (AES-256 na S3/dysku)** | < 1 ms | ~2–10 ms | Niezauważalny |
+| **Kompresja zdjęcia w przeglądarce (PWA)** | ~100–300 ms | 0 ms (pominięta) | Minimalny |
+| **Wysłanie po słabym Wi-Fi/LTE (np. 4 Mb/s upload)** | **~2 s** | **~20 s** | **Krytyczny** |
+
+### Jak to działa w zaprojektowanej architekturze
+
+* **Szyfrowanie w tranzycie (TLS 1.3):** Realizowane w locie (strumieniowo) przez przeglądarkę i Reverse Proxy. Najbardziej kosztowny element — nawiązanie połączenia (*TLS handshake*) — odbywa się raz i jest utrzymywany dla kolejnych żądań, zajmując ok. 20–50 ms.
+* **Szyfrowanie w spoczynku (at-rest):** Odbywa się na poziomie systemu plików (np. szyfrowane wolumeny dyskowe) lub silnika Object Storage (SSE-S3 w MinIO/AWS). Aplikacja w ogóle nie marnuje na to zasobów CPU, a dyski NVMe/SSD z warstwą szyfrującą nie wykazują zauważalnego spadku prędkości zapisu przy skali ~100 użytkowników.
+* **Narzut na rozmiar danych:** Szyfrowanie symetryczne (AES-GCM) nie zwiększa istotnie rozmiaru pliku — dodaje zaledwie kilkadziesiąt bajtów metadanych (wektor inicjalizujący i tag uwierzytelniający).
+
+Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa jest więc nie rezygnacja z szyfrowania ani jego optymalizacja, lecz **kompresja zdjęć po stronie klienta (PWA)** oraz asynchroniczne przesyłanie dużych załączników w tle, podczas gdy sam tekst zgłoszenia trafia do bazy natychmiast.
+
+---
+
+### Czy AI stosuje modne technologie bez uzasadnienia:
+Prawie na pewno nie. AI prezentuje uzasadnienie zastosowania zaproponowanych technologii, wraz z porównaniem dlaczego rozwiązania alternatywne byłyby mniej adekwatne. Zespół pragnie w tym miejscu zaznaczyć, że nie czuje się kompetentnym do oceny czy zaproponowane technologie są modne.
+
+---
+
+### Jasność odpowiedzialności komponentów:
+W tym miejscu zespół miał kilka uwag i pytań, zatem poprosiliśmy AI o doprecyzowanie. Wyniki tej prośby zawarto poniżej.
 
 ### Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
 
@@ -295,19 +346,22 @@ Połączenie `Modułu Decyzyjnego` i `Audytu` w jeden blok sugeruje, że audytow
 * **Warstwa A (Reguły) i Warstwa B (Worker AI):** Tylko *ocena* zgłoszenia (zwracają wynik oceny, nic nie wysyłają i nie zmieniają statusów).
 * **Moduł Decyzyjny i Eskalacji:** Jedyne źródło prawdy o priorytecie (`effective_priority`), fuzji Warstwy A/B/C oraz pilnowaniu SLA (timery 5 min i eskalacja Tier 5).
 * **Moduł Powiadomień:** Wyłącznie techniczna wysyłka komunikatów przez zewnętrzne bramki (SMS, Push, E-mail) i obsługa ponowień (retry).
-* **Moduł Audytu:** Wyłącznie niemutowalny zapis wszystkich istotnych zdarzeń ze wszystkich modułów.
+* **Moduł Audytu:** Wyłącznie niemutowalny zapis wszystkich istotnych zdarzeń ze wszystkich modułów
 
 ---
-### Adekwatność architektury do skali projektu:
 
-Architektura nie wydaje sie wybiegac ponad skale projektu. Wręcz przeciwnie, AI sugeruje
-przechowywanie zgłoszeń przez 30 dni. W opini zespołu wskazane byłoby storzenie archiwum
-zdarzeń przechowujące wszystkie zgłoszenia: w pełni (t.j. z dokumentacją zdjęciową) w
-przypadku zgłoszeń krytycznych, w przypadku pozostałych tylko dokumentację tekstową.
-Takie rozwiązanie pomogło by w szkoleniu workera AI oraz umożliwiło by rozbudowę systemu
-o dodatkowy moduł skanujący w określonych odstępach czsu (np. co tydzień) w poszukiwaniu
-trendów sugerujących regularne występowanie problemów w sekcjach. Szacowane wyliczenie
-kosztów technologicznych zawarto w dalszej części dokumentu.
+### Utrzymywalność i testowalność rozwiązania:
+
+Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
+
+W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
+
+---
+
+### Czy rozwiązanie jest technicznie możliwe, ale niepraktyczne:
+W opini zespołu, rozwiązanie wydaje się być technologicaznie możliwe, oraz zdecydowanie jest praktyczne.
+
+---
 
 ### Uwaga zespołu:
 We wcześniejszych etapach pracy, zwrócono uwagę AI na skrócenie czasu reakcji kierownika
@@ -321,30 +375,3 @@ jest osobą odpowiedzialną za ogólne bezpieczeństwo zakładu, ale na poziomie
 Za bezpieczeństwo na hali odpowiada wyznaczony pracownik (najczęściej kierownik zmiany)
 i to na nim, nie na dyrekorze spoczywa odpowiedzialność reakcji na wypadki. Nie wspominając
 o wątpliwych kompetencjach dyrekcji w zakresie procesów technologicznych.
-
----
-
-### Ryzyko overengineeringu:
-Niskie. Jedynym zastanawiającym aspektem jest nacisk położony na szyfrowanie zgłoszeń, jednakże biorąc pod uwagę iż wpływ tego rozwiązania na responsywność i szybkość działania systemu jest infinitezymalny możemy to wybaczyć.
-
-
----
-
-### Jasność odpowiedzialności komponentów:
-W tym miejscu zespół miał kilka uwag i pytań, zatem poprosiliśmy AI o doprecyzowanie. Wyniki tej prośby zawarto poniżej.
-
-
-### Uwagi zespołu:
-
-* **Czy AI stosuje modne technologie bez uzasadnienia?:**
-Prawie na pewno nie. AI prezentuje uzasadnienie zastosowania zaproponowanych technologii, wraz z porównaniem dlaczego rozwiązania alternatywne byłyby mniej adekwatne. Zespół pragnie w tym miejscu zaznaczyć, że nie czuje się kompetentnym do oceny czy zaproponowane technologie są modne.
----
-
-### Utrzymywalność i testowalność rozwiązania:
-
-Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
-
-W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
-
----
-
