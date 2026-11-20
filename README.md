@@ -210,3 +210,32 @@ czy AI stosuje modne technologie bez uzasadnienia: nie, uzasadnia je
 jasność odpowiedzialności komponentów: w miare
 utrzymywalność i testowalność rozwiązania: ten modularny monolit
 czy rozwiązanie jest technicznie możliwe, ale niepraktyczne: wydaje sie praktyczne
+
+
+
+
+
+### PROMPT
+
+Wpływ szyfrowania na szybkość obsługi paczek o rozmiarze 1–10 MB jest **pomijalny — to ułamek procenta całkowitego czasu operacji (zwykle 1–10 milisekund)**.
+
+Współczesne procesory (zarówno serwerowe, jak i w smartfonach) posiadają sprzętowe wsparcie dla kryptografii (instrukcje AES-NI oraz ARMv8 Crypto). Dzięki temu pojedynczy rdzeń szyfruje dane z prędkością **1–5 GB/s**.
+
+### Porównanie wąskich gardeł dla pojedynczego zgłoszenia
+
+Prawdziwym ograniczeniem w systemie SafeWork nie jest szyfrowanie, lecz **przepustowość sieci na hali produkcyjnej**.
+
+| Etap przetwarzania | Paczka 1 MB (po kompresji w PWA) | Paczka 10 MB (surowe zdjęcia) | Wpływ na odczucia użytkownika |
+| --- | --- | --- | --- |
+| **Szyfrowanie w tranzycie (TLS 1.3)** | < 1 ms | ~2–5 ms | Niezauważalny |
+| **Szyfrowanie w spoczynku (AES-256 na S3/dysku)** | < 1 ms | ~2–10 ms | Niezauważalny |
+| **Kompresja zdjęcia w przeglądarce (PWA)** | ~100–300 ms | 0 ms (pominięta) | Minimalny |
+| **Wysłanie po słabym Wi-Fi/LTE (np. 4 Mb/s upload)** | **~2 s** | **~20 s** | **Krytyczny** |
+
+### Jak to działa w zaprojektowanej architekturze
+
+* **Szyfrowanie w tranzycie (TLS 1.3):** Realizowane w locie (strumieniowo) przez przeglądarkę i Reverse Proxy. Najbardziej kosztowny element — nawiązanie połączenia (*TLS handshake*) — odbywa się raz i jest utrzymywany dla kolejnych żądań, zajmując ok. 20–50 ms.
+* **Szyfrowanie w spoczynku (at-rest):** Odbywa się na poziomie systemu plików (np. szyfrowane wolumeny dyskowe) lub silnika Object Storage (SSE-S3 w MinIO/AWS). Aplikacja w ogóle nie marnuje na to zasobów CPU, a dyski NVMe/SSD z warstwą szyfrującą nie wykazują zauważalnego spadku prędkości zapisu przy skali ~100 użytkowników.
+* **Narzut na rozmiar danych:** Szyfrowanie symetryczne (AES-GCM) nie zwiększa istotnie rozmiaru pliku — dodaje zaledwie kilkadziesiąt bajtów metadanych (wektor inicjalizujący i tag uwierzytelniający).
+
+Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa jest więc nie rezygnacja z szyfrowania ani jego optymalizacja, lecz **kompresja zdjęć po stronie klienta (PWA)** oraz asynchroniczne przesyłanie dużych załączników w tle, podczas gdy sam tekst zgłoszenia trafia do bazy natychmiast.
