@@ -263,12 +263,6 @@ Przy takiej skali objętość danych jest pomijalnie mała — mieści się w u�
 * **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
 
 
-### Utrzymywalność i testowalność rozwiązania:
-
-Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
-
-W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
-
 
 ### Prompt 3: Co sądzisz o jasności odpowiedzialności komponentów?
 
@@ -302,3 +296,39 @@ Połączenie `Modułu Decyzyjnego` i `Audytu` w jeden blok sugeruje, że audytow
 * **Moduł Decyzyjny i Eskalacji:** Jedyne źródło prawdy o priorytecie (`effective_priority`), fuzji Warstwy A/B/C oraz pilnowaniu SLA (timery 5 min i eskalacja Tier 5).
 * **Moduł Powiadomień:** Wyłącznie techniczna wysyłka komunikatów przez zewnętrzne bramki (SMS, Push, E-mail) i obsługa ponowień (retry).
 * **Moduł Audytu:** Wyłącznie niemutowalny zapis wszystkich istotnych zdarzeń ze wszystkich modułów.
+
+
+### Adekwatność architektury do skali projektu:
+
+Architektura nie wydaje sie wybiegac ponad skale projektu. Wręcz przeciwnie, AI sugeruje
+przechowywanie zgłoszeń przez 30 dni. W opini zespołu wskazane byłoby storzenie archiwum
+zdarzeń przechowujące wszystkie zgłoszenia: w pełni (t.j. z dokumentacją zdjęciową) w
+przypadku zgłoszeń krytycznych, w przypadku pozostałych tylko dokumentację tekstową.
+Takie rozwiązanie pomogło by w szkoleniu workera AI oraz umożliwiło by rozbudowę systemu
+o dodatkowy moduł skanujący w określonych odstępach czsu (np. co tydzień) w poszukiwaniu
+trendów sugerujących regularne występowanie problemów w sekcjach. Szacowane wyliczenie
+kosztów technologicznych zawarto w dalszej części dokumentu.
+
+### Uwaga zespołu:
+We wcześniejszych etapach pracy, zwrócono uwagę AI na skrócenie czasu reakcji kierownika
+(który pierwotnie AI proponowało na 30 minut) i konieczności zatrzania hali w przypadku
+stwierdzenia przez workera zdarzenia krytycznego z wysokim współczynnikiem pewności.
+Mimo dostępu do całej dotychczasowej dokumentacji, na tym etapie AI w prawdze zachowało
+Skrócony czas reakcji, ale zamiast trzymać się automatycznego wstrzymania, postanowiło
+wprowadzić eskalację do dyrekcji. Zespół pragnie zauważyć, że nie dość iż jest to rozwiązanie
+sprzeczne z wcześniejszymi założeniami, to jest ono zupełnie bez sensu - dyrektor zakładu
+jest osobą odpowiedzialną za ogólne bezpieczeństwo zakładu, ale na poziomie ogólnym.
+Za bezpieczeństwo na hali odpowiada wyznaczony pracownik (najczęściej kierownik zmiany)
+i to na nim, nie na dyrekorze spoczywa odpowiedzialność reakcji na wypadki. Nie wspominając
+o wątpliwych kompetencjach dyrekcji w zakresie procesów technologicznych.
+
+
+
+
+
+
+### Utrzymywalność i testowalność rozwiązania:
+
+Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
+
+W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
