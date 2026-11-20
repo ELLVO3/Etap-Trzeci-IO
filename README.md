@@ -1,38 +1,16 @@
-# shit
-
 ## 1. Kontekst projektowy i ograniczenia architektoniczne
 
 Projekt architektury systemu **SafeWork** został dopasowany do realnych parametrów organizacji, zasobów zespołu oraz wymagań niefunkcjonalnych zdefiniowanych w dokumentacji:
 
 | Parametr | Wartość / Ograniczenie | Implikacja architektoniczna |
 | --- | --- | --- |
-| **Skala i użytkownicy** | ~350 pracowników; maks. 100 użytkowników jednocześnie (RNF-WY-003).
-
- | Brak potrzeby budowy rozproszonej architektury mikroserwisowej; wystarczy pionowo skalowalny serwer aplikacji. |
-| **Zespół realizacyjny** | 5 osób.
-
- | Konieczność minimalizacji narzutu DevOps i złożoności wdrożeniowej (jeden główny kod źródłowy, wspólny stack). |
-| **Czas realizacji** | 19 tygodni w 4 fazach (MVP w 6 tygodni, integracja AI w Fazie 3 – 6 tygodni).
-
- | Architektura musi umożliwiać szybkie dostarczenie MVP bez AI, a następnie bezinwazyjne podpięcie modułu AI (w tym w trybie *Shadow Mode*).
-
- |
-| **Wydajność** | Standardowe operacje < 2 s (RNF-WY-001); analiza AI < 10 s (RNF-WY-002).
-
- | Rozdzielenie synchronicznego zapisu zgłoszenia od asynchronicznego przetwarzania AI (kolejka zadań). |
-| **Dostępność i backup** | 99,5% w godz. 6:00–22:00 (RNF-DW-001); codzienny backup z retencją 30 dni (RNF-DW-002).
-
- | Okno serwisowe w nocy (22:00–6:00) ułatwia aktualizacje i kopie zapasowe bez wymogu kosztownej architektury Active-Active. |
-| **Środowisko pracy** | Hala produkcyjna (możliwy słaby zasięg); desktop + mobile (RNF-UZ-001); PL + EN (RNF-UZ-003).
-
- | Aplikacja webowa typu **PWA** (Progressive Web App) z obsługą buforowania offline.
-
- |
-| **Bezpieczeństwo i audyt** | Role (RBAC), szyfrowanie w tranzycie i spoczynku, pełny ślad audytowy (RNF-BE-001 do 004).
-
- | Izolacja widoczności danych na poziomie zapytań, niemutowalny log zmian (`ai_suggestion` vs `effective_priority`).
-
- |
+| **Skala i użytkownicy** | ~350 pracowników; maks. 100 użytkowników jednocześnie (RNF-WY-003). | Brak potrzeby budowy rozproszonej architektury mikroserwisowej; wystarczy pionowo skalowalny serwer aplikacji. |
+| **Zespół realizacyjny** | 5 osób. | Konieczność minimalizacji narzutu DevOps i złożoności wdrożeniowej (jeden główny kod źródłowy, wspólny stack). |
+| **Czas realizacji** | 19 tygodni w 4 fazach (MVP w 6 tygodni, integracja AI w Fazie 3 – 6 tygodni). | Architektura musi umożliwiać szybkie dostarczenie MVP bez AI, a następnie bezinwazyjne podpięcie modułu AI (w tym w trybie *Shadow Mode*). |
+| **Wydajność** | Standardowe operacje < 2 s (RNF-WY-001); analiza AI < 10 s (RNF-WY-002). | Rozdzielenie synchronicznego zapisu zgłoszenia od asynchronicznego przetwarzania AI (kolejka zadań). |
+| **Dostępność i backup** | 99,5% w godz. 6:00–22:00 (RNF-DW-001); codzienny backup z retencją 30 dni (RNF-DW-002). | Okno serwisowe w nocy (22:00–6:00) ułatwia aktualizacje i kopie zapasowe bez wymogu kosztownej architektury Active-Active. |
+| **Środowisko pracy** | Hala produkcyjna (możliwy słaby zasięg); desktop + mobile (RNF-UZ-001); PL + EN (RNF-UZ-003). | Aplikacja webowa typu **PWA** (Progressive Web App) z obsługą buforowania offline. |
+| **Bezpieczeństwo i audyt** | Role (RBAC), szyfrowanie w tranzycie i spoczynku, pełny ślad audytowy (RNF-BE-001 do 004). | Izolacja widoczności danych na poziomie zapytań, niemutowalny log zmian (`ai_suggestion` vs `effective_priority`). |
 
 ---
 
