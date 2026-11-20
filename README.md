@@ -215,7 +215,7 @@ czy rozwiązanie jest technicznie możliwe, ale niepraktyczne: wydaje sie prakty
 
 
 
-### PROMPT
+### PROMPT 1: Jak szyfrowanie tak dużych paczek wpłynie na szybkość obsługi przez system?
 
 Wpływ szyfrowania na szybkość obsługi paczek o rozmiarze 1–10 MB jest **pomijalny — to ułamek procenta całkowitego czasu operacji (zwykle 1–10 milisekund)**.
 
@@ -240,7 +240,7 @@ Prawdziwym ograniczeniem w systemie SafeWork nie jest szyfrowanie, lecz **przepu
 
 Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa jest więc nie rezygnacja z szyfrowania ani jego optymalizacja, lecz **kompresja zdjęć po stronie klienta (PWA)** oraz asynchroniczne przesyłanie dużych załączników w tle, podczas gdy sam tekst zgłoszenia trafia do bazy natychmiast.
 
-### Prompt 2
+### Prompt 2: Przy założeniu, że jest 20 zgłoszeń dziennie, oszacuj ile objętości zajęłoby przechowywanie całego tekstu w skali miesiąca przy założeniu, że będą 2 zdarzenia krytyczne, które trzeba będzie przechowywać ze zdjęciami?
 
 Przechowywanie wszystkich danych tekstowych z całego miesiąca (600 zgłoszeń) wraz ze zdjęciami z 2 zdarzeń krytycznych zajmie łącznie zaledwie **ok. 15–45 MB miesięcznie**.
 
