@@ -239,3 +239,25 @@ Prawdziwym ograniczeniem w systemie SafeWork nie jest szyfrowanie, lecz **przepu
 * **Narzut na rozmiar danych:** Szyfrowanie symetryczne (AES-GCM) nie zwiększa istotnie rozmiaru pliku — dodaje zaledwie kilkadziesiąt bajtów metadanych (wektor inicjalizujący i tag uwierzytelniający).
 
 Aby dotrzymać wymagania **RNF-WY-001 (< 2 s na zapis zgłoszenia)**, kluczowa jest więc nie rezygnacja z szyfrowania ani jego optymalizacja, lecz **kompresja zdjęć po stronie klienta (PWA)** oraz asynchroniczne przesyłanie dużych załączników w tle, podczas gdy sam tekst zgłoszenia trafia do bazy natychmiast.
+
+### Prompt 2
+
+Przechowywanie wszystkich danych tekstowych z całego miesiąca (600 zgłoszeń) wraz ze zdjęciami z 2 zdarzeń krytycznych zajmie łącznie zaledwie **ok. 15–45 MB miesięcznie**.
+
+Przy takiej skali objętość danych jest pomijalnie mała — mieści się w ułamku darmowych limitów większości usług chmurowych.
+
+### Szczegółowe wyliczenie (założenie: 30 dni × 20 zgłoszeń = 600 zgłoszeń/miesiąc)
+
+| Składnik | Obliczenia | Szacowana objętość / mies. |
+| --- | --- | --- |
+| **Sam tekst, metadane i audyt** (PostgreSQL) | 600 zgłoszeń × 5–10 KB | **3 – 6 MB** |
+| **Wektory AI / embeddingi** (`pgvector`) | 600 zgłoszeń × 6–15 KB | **3,6 – 9 MB** |
+| **Zdjęcia – 2 zdarzenia krytyczne** (po kompresji, np. 2–3 zdj. na zdarzenie) | 4–6 zdjęć × 0,5–1 MB | **2 – 6 MB** |
+| **Zdjęcia – 2 zdarzenia krytyczne** (surowe oryginały dowodowe, 2–3 zdj.) | 4–6 zdjęć × 3–5 MB | **12 – 30 MB** |
+| **RAZEM (wersja ze zdjęciami skompresowanymi)** |  | **~9 – 21 MB** |
+| **RAZEM (wersja z surowymi zdjęciami dowodowymi)** |  | **~19 – 45 MB** |
+
+### Praktyczny wniosek dla projektu
+
+* **Zdarzenia krytyczne jako materiał dowodowy:** Przy zaledwie 2 zdarzeniach krytycznych miesięcznie koszt przechowywania ich zdjęć w pełnej, nieskompresowanej rozdzielczości (z oryginalnymi metadanymi EXIF) to maksymalnie **~30 MB miesięcznie** (~360 MB rocznie). Warto więc dla zdarzeń krytycznych (Tier 4/5) wyłączyć kompresję lub zachować oryginał na potrzeby postępowań BHP i ubezpieczeniowych.
+* **Skala roczna i backupy:** W skali całego roku przyrost wyniesie maksymalnie **~0,5 GB**. Nawet przy codziennym pełnym backupie z retencją 30 dni (RNF-DW-002), całkowite zapotrzebowanie na przestrzeń dyskową po pierwszym roku nie przekroczy kilkunastu gigabajtów.
