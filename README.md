@@ -330,6 +330,16 @@ Niskie. Jedynym zastanawiającym aspektem jest nacisk położony na szyfrowanie 
 
 ---
 
+### Jasność odpowiedzialności komponentów:
+W tym miejscu zespół miał kilka uwag i pytań, zatem poprosiliśmy AI o doprecyzowanie. Wyniki tej prośby zawarto poniżej.
+
+
+### Uwagi zespołu:
+
+* **Czy AI stosuje modne technologie bez uzasadnienia?:**
+Prawie na pewno nie. AI prezentuje uzasadnienie zastosowania zaproponowanych technologii, wraz z porównaniem dlaczego rozwiązania alternatywne byłyby mniej adekwatne. Zespół pragnie w tym miejscu zaznaczyć, że nie czuje się kompetentnym do oceny czy zaproponowane technologie są modne.
+---
+
 ### Utrzymywalność i testowalność rozwiązania:
 
 Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względu na modularny monolit, ale wypadałoby zrobić backup hardware-owy ze względu na możliweość zaistnienia nagłej awarii serwera, która uniemożliwiłaby funkcjonowane całego systemu.
