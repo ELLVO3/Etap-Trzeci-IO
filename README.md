@@ -324,6 +324,8 @@ o wątpliwych kompetencjach dyrekcji w zakresie procesów technologicznych.
 
 ---
 
+### Ryzyko overengineeringu:
+Niskie. Jedynym zastanawiającym aspektem jest nacisk położony na szyfrowanie zgłoszeń, jednakże biorąc pod uwagę iż wpływ tego rozwiązania na responsywność i szybkość działania systemu jest infinitezymalny możemy to wybaczyć.
 
 
 ---
@@ -335,3 +337,4 @@ Utrzymywalność z punktu programowego jest na bardzo dobrym poziomie ze względ
 W przypadku testowalności rozwiązania - nie byłoby większych problemów. Z racji iż jest to modularny monolit, można by było testować poszczególne moduły systemu zamiast całego systemu na raz, co skraca czas testowania i zwiększa szansę wykrycia błędów. Podczas wdrażania tego systemu należałoby stworzyć jego symulację, na której to można by było wykonywać testy.
 
 ---
+
